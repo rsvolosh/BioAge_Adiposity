@@ -1,0 +1,1367 @@
+---
+title: "Adiposity and biological age in CLHNS - Figures"
+author: "Remy Voloshchuk"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, eval=TRUE, include=TRUE, cache=FALSE)
+devtools::load_all()
+library(BAA)
+library(jtools)
+library(ggplot2)
+library(ggpubr)
+library(cowplot)
+library(patchwork)
+library(tidyr)
+library(kableExtra)
+library(modelsummary)
+library(openxlsx)
+library(dplyr)
+library(survey)
+library(gtsummary)
+```
+
+```{r load data, eval=TRUE, include=FALSE}
+
+load('data.RData')
+
+# scaling WC, WHtR, and DunedinPACE, DNAmTL residual by 10
+epi4 <- epi_deid2 %>% mutate_at(vars(c(whtr, r.dnamtl)), ~ 10*.) %>% mutate(waist = waist/10) %>% mutate(bmi = bmi/5) %>%
+  # scaling other residuals to be in months
+  mutate_at(vars(c(r.dnamage, r.dnamagehannum, r.dnamphenoage, r.dnamgrimage, r.pchorvath2, r.pchannum, r.pcphenoage, r.pcgrimage)), ~ 12*.) %>%
+  # scaling DunedinPACE to report it in weeks
+  mutate_at(vars(dunedin), ~ 100*.)
+
+my_betas = c("BMI", "WC", "WHtR", 
+             "Sex", "uw",
+             paste0("BMI", "*Sex"), paste0("WC", "*Sex"), paste0("WHtR", "*Sex"), 
+             paste0("BMI", "*uw"), paste0("WC", "*uw"), paste0("WHtR", "*uw"))
+
+```
+
+## Tables {.tabset .tabset-fade .tabset-pills}
+
+### Table 1 (main and supplementary) {.tabset .tabset-fade .tabset-pills}
+
+#### Table 1 (main)
+
+For main text
+
+```{r table 1 main, eval=TRUE, message=FALSE, warning=FALSE, include=TRUE}
+
+# adding and comparing them
+epi_deid2.t1 <- epi_deid2 %>% mutate(across(sex, as.numeric)) # getting rid of labels
+
+#####
+# making table to beautifully share info
+epi_deid2.t1_svy <- svydesign(id      = ~new_ids,
+                          data    = epi_deid2.t1 %>% mutate(
+                            sex = case_when(
+                              sex == 1 ~ "Female",
+                              sex == 2 ~ "Male", TRUE ~ NA
+                            ),
+                            cursmok = case_when(
+                              cursmok == 1 ~ 'Never',
+                              cursmok == 2 ~ 'Former',
+                              cursmok == 3 ~ 'Current'
+                            ),
+                            cat.preg.comp = case_when(
+                              num.preg.comp == 1 ~ "1",
+                              num.preg.comp == 2 ~ "2",
+                              num.preg.comp > 2  ~ "3+",
+                              sex == 2            ~ NA,
+                              TRUE ~ "0"
+                            ),
+                            totmonthsbf = case_when(
+                              num.preg.comp == 0 ~ NA,
+                              sex == 2           ~ NA,
+                              TRUE ~ totmonthsbf
+                              ),
+                            nobf = case_when(
+                              sex == 2          ~ NA,
+                              totmonthsbf > 0   ~ "Yes",
+                              num.preg.comp > 0 ~ "No",
+                              TRUE ~  NA
+                              )
+                            ) %>% mutate(
+                              nobf = factor(nobf, levels = c("Yes", "No")),
+                              cat.preg.comp = factor(cat.preg.comp, levels = c("0", "1", "2", "3+")),
+                              cursmok = factor(cursmok, levels = c("Current", "Former", "Never"))
+                            )
+                         )
+
+#####
+sum.table <- tbl_svysummary(data = epi_deid2.t1_svy, 
+                 by =  sex,
+    # Use include to dplyr::select variables
+    include = c(height, weight, bmi, f.bmi4cat,
+                waist, f.waist.high,
+                whtr, f.whtr.high,
+                # clocks
+                r.dnamage, r.dnamagehannum, r.dnamphenoage, r.dnamgrimage, r.dnamtl, dunedin,
+                r.pchorvath2, r.pchannum, r.pcphenoage, r.pcgrimage, r.pcdnamtl, factor.age, pcfactor.age,
+                # covariates
+                hai, cursmok
+                ), 
+   label = list(height ~ "Height (cm)",
+                weight ~ "Weight (kg)",
+                waist ~ "Waist (cm)",
+                f.waist.high ~ "Waist Circumference Category",
+                whtr ~ "Waist-to-height ratio",
+                f.whtr.high ~ "Waist-to-Height Ratio Category",
+                bmi ~ "BMI (kg/m2)",
+                f.bmi4cat ~ 'BMI Category',
+                # clocks
+                r.dnamage ~ "Horvath", 
+                r.dnamagehannum ~ "Hannum", 
+                r.dnamphenoage ~ "PhenoAge", 
+                r.dnamgrimage ~ "GrimAge", 
+                r.dnamtl ~ "DNAmTL", 
+                dunedin ~ "DunedinPACE",
+                r.pchorvath2 ~ "PCHorvath", 
+                r.pchannum ~ "PCHannum", 
+                r.pcphenoage ~ "PCPhenoAge", 
+                r.pcgrimage ~ "PCGrimAge", 
+                r.pcdnamtl ~ "PCDNAmTL",
+                factor.age ~ "Factor", 
+                pcfactor.age ~ "PCFactor",
+                # covariates
+                hai ~ "Household Wealth Index", 
+                cursmok ~ "Smoking Status"),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n}  ({p}%)"),
+    digits = list(all_continuous()  ~ c(1, 1),
+                  c(r.dnamage, r.dnamagehannum, r.dnamphenoage, r.dnamgrimage, r.dnamtl, dunedin,
+                    r.pchorvath2, r.pchannum, r.pcphenoage, r.pcgrimage, r.pcdnamtl, factor.age, pcfactor.age, hai, whtr) ~ c(3,3),
+                  all_categorical() ~ c(0, 1)),
+    type = list(c(height, weight, bmi, waist, whtr,
+                  r.dnamage, r.dnamagehannum, r.dnamphenoage, r.dnamgrimage, r.dnamtl, dunedin,
+                  r.pchorvath2, r.pchannum, r.pcphenoage, r.pcgrimage, r.pcdnamtl, hai, factor.age, pcfactor.age) ~ "continuous"),
+   # sort = list(c(colnames(epi_deid2.t1_svy)[grepl(".high", epi_deid2.t1_svy %>% colnames)], cursmok) ~ "frequency"),
+    missing = "no"
+  ) %>%
+  modify_caption("Descriptive statistics") %>%
+  add_p(test = list(
+      all_continuous() ~ "svy.kruskal.test",
+      all_categorical() ~ "svy.chisq.test"
+    )
+  )%>%
+  bold_labels()%>%
+    add_overall(
+    #statistic = ~"(n={n_unweighted}"
+      )%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
+
+# write.csv2(sum.table %>% as.data.frame(), "tables/table1.csv")
+
+sum.table %>% as_flex_table()
+```
+
+#### Table 1 (pregnancy + breastfeeding variables)
+
+For females, add to main later
+
+```{r table 1 fem, eval = TRUE, include = TRUE}
+
+# adding and comparing them
+epi_deid2.t1f <- epi_deid2 %>% filter(sex==0) %>% mutate(across(sex, as.numeric)) # getting rid of labels
+
+epi_deid2.t1_svyf <- svydesign(id      = ~new_ids,
+                          data    = epi_deid2.t1f %>% mutate(
+                            cat.preg.comp = case_when(
+                              num.preg.comp == 1 ~ "1",
+                              num.preg.comp == 2 ~ "2",
+                              num.preg.comp > 2  ~ "3+",
+                              sex == 2            ~ NA,
+                              TRUE ~ "0"
+                            ),
+                            totmonthsbf = case_when(
+                              num.preg.comp == 0 ~ NA,
+                              sex == 2           ~ NA,
+                              TRUE ~ totmonthsbf
+                              ),
+                            nobf = case_when(
+                              sex == 2          ~ NA,
+                              totmonthsbf > 0   ~ "Yes",
+                              num.preg.comp > 0 ~ "No",
+                              TRUE ~  NA
+                              )
+                            ) %>% mutate(
+                              nobf = factor(nobf, levels = c("Yes", "No")),
+                              cat.preg.comp = factor(cat.preg.comp, levels = c("0", "1", "2", "3+"))
+                            )
+                          )
+
+#####
+sum.table.f <- tbl_svysummary(data = epi_deid2.t1_svyf, 
+    # Use include to dplyr::select variables
+    include = c(cat.preg.comp, nobf, totmonthsbf
+                ), 
+   label = list(cat.preg.comp ~ "Completed Pregnancies", 
+                nobf ~ "Ever breastfed?", 
+                totmonthsbf ~ "Total months breastfeeding"),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n}  ({p}%)"),
+    digits = list(all_continuous()  ~ c(1, 1),
+                  all_categorical() ~ c(0, 1)),
+    type = list(c(totmonthsbf) ~ "continuous"),
+   # sort = list(c(colnames(epi_deid2.t1_svy)[grepl(".high", epi_deid2.t1_svy %>% colnames)], cursmok) ~ "frequency"),
+    missing = "no"
+  ) %>%
+  modify_caption("Descriptive statistics") %>%
+  bold_labels()%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
+
+# write.csv2(sum.table.f %>% as.data.frame(), "tables/table1_f.csv")
+sum.table.f %>% as_flex_table()
+
+```
+
+### Making models with standardised betas {.tabset .tabset-fade .tabset-pills}
+
+```{r making models 1, include = FALSE, eval = TRUE}
+
+# create empty lists
+# non-PC clocks
+all.unadj.i <- list() # unadjusted, except for sex, interacted with exposure
+all.adj2 <- list() # fully-adjusted
+all.adj3 <- list() # fully-adjusted, with underweight interacted
+all.adj4 <- list() # fully-adjusted, without uw interactions, not sex-stratified
+all.adj5 <- list() # fully-adjusted, without interactions
+
+# PC clocks
+all.pc.unadj.i <- list() # unadjusted, except for sex, interacted with exposure
+all.pc.adj2 <- list() # fully-adjusted
+all.pc.adj3 <- list() # fully-adjusted, with underweight interacted
+all.pc.adj4 <- list() # fully-adjusted, without uw interactions, not sex-stratified
+all.pc.adj5 <- list() # fully-adjusted, without interactions
+
+for (j in 1:length(exposures)) {
+  all.unadj.i[[j]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[j], c(paste0(exposures[j], "*sex")), epi4, to_return = "model")
+  all.adj2[[j]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[j], c(paste0(exposures[j], "*sex"), cell.props, covars.fem), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+  all.adj3[[j]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[j], c(cell.props, covars.fem, paste0(exposures[j], "*sex"), paste0(exposures[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+  all.adj4[[j]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[j], c(cell.props, covars.fem, "sex", paste0(exposures[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+  all.adj5[[j]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[j], c(cell.props, covars.fem, "sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+}
+
+# adding height to the waist circumference plots.
+all.adj2[[2]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[2], c(paste0(exposures[2], "*sex"), cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+all.adj3[[2]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[2], c(cell.props, covars.fem, paste0(exposures[2], "*sex"), paste0(exposures[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+all.adj4[[2]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[2], c(cell.props, covars.fem, paste0(exposures[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+all.adj5[[2]] <- table.mvreg(mvreg_response_ns_nonpc, exposures[2], c(cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+
+for (j in 1:length(exposures)) {
+  all.pc.unadj.i[[j]] <- table.mvreg(mvreg_response_ns_pc, exposures[j], c("sex", paste0(exposures[j], "*sex")), epi4, to_return = "model")
+  all.pc.adj2[[j]] <- table.mvreg(mvreg_response_ns_pc, exposures[j], c(paste0(exposures[j], "*sex"), cell.props, covars.fem), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+  all.pc.adj3[[j]] <- table.mvreg(mvreg_response_ns_pc, exposures[j], c(paste0(exposures[j], "*sex"), cell.props, covars.fem, paste0(exposures[j], "*sex"), paste0(exposures[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+  all.pc.adj4[[j]] <- table.mvreg(mvreg_response_ns_pc, exposures[j], c(cell.props, covars.fem, "sex", paste0(exposures[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+  all.pc.adj5[[j]] <- table.mvreg(mvreg_response_ns_pc, exposures[j], c(cell.props, covars.fem, "sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+}
+
+# adding height to the waist circumference plots.
+all.pc.adj2[[2]] <- table.mvreg(mvreg_response_ns_pc, exposures[2], c(paste0(exposures[2], "*sex"), cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+all.pc.adj3[[2]] <- table.mvreg(mvreg_response_ns_pc, exposures[2], c(cell.props, covars.fem, paste0(exposures[2], "*sex"), paste0(exposures[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+all.pc.adj4[[2]] <- table.mvreg(mvreg_response_ns_pc, exposures[2], c(cell.props, covars.fem, paste0(exposures[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+all.pc.adj5[[2]] <- table.mvreg(mvreg_response_ns_pc, exposures[2], c(cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+
+```
+
+```{r which model 5 u}
+
+num <- length(exposures)*length(mvreg_response_labels)
+
+all.final <- list(list(),list(),list(),list())
+
+all.pc.final <- list(list(),list(),list(),list())
+
+for (i in 1:length(exposures)) {
+  for (j in 1:length(mvreg_response_labels)) {
+    all.final[[i]][[j]] <- return.fm(return.fm(all.adj3[[i]][[j]], all.adj2[[i]][[j]], all.adj5[[i]][[j]]), return.fm(all.adj3[[i]][[j]], all.adj4[[i]][[j]], all.adj5[[i]][[j]]))
+  
+    all.pc.final[[i]][[j]] <- return.fm(return.fm(all.pc.adj3[[i]][[j]], all.pc.adj2[[i]][[j]], all.pc.adj5[[i]][[j]]), return.fm(all.pc.adj3[[i]][[j]], all.pc.adj4[[i]][[j]], all.pc.adj5[[i]][[j]]))
+  }
+}
+
+```
+
+```{r making sex-stratified models for DunedinPACE, include = FALSE}
+
+# create empty lists
+# males
+m.adj2 <- list() # fully-adjusted
+m.adj3 <- list() # fully-adjusted, with underweight interacted
+
+# females
+f.adj2 <- list() # fully-adjusted
+f.adj3 <- list() # fully-adjusted, with underweight interacted
+
+# Male only
+for (j in 1:length(exposures)) {
+  m.adj2[[j]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[j], c(cell.props, covars.all), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, not underweight-interacted
+  m.adj3[[j]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[j], c(cell.props, covars.all, paste0(exposures[j], "*uw")), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, underweight interacted
+}
+
+# adding height to waist circumference
+m.adj2[[2]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[2], c(cell.props, covars.all, "height"), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, not underweight-interacted
+m.adj3[[2]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[2], c(cell.props, covars.all, paste0(exposures[2], "*uw"), "height"), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, underweight interacted
+
+# Female only
+for (j in 1:length(exposures)) {
+  f.adj2[[j]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[j], c(cell.props, covars.fem), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, not sex-stratified
+  f.adj3[[j]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[j], c(cell.props, covars.fem, paste0(exposures[j], "*uw")), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, underweight interacted
+}
+
+# adding height to waist circumference
+f.adj2[[2]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[2], c(cell.props, covars.fem, "height"), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, not underweight-interacted
+f.adj3[[2]] <- table.mvreg(mvreg_response_ns_nonpc[7], exposures[2], c(cell.props, covars.fem, paste0(exposures[2], "*uw"), "height"), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, underweight interacted
+
+```
+
+```{r which model 5 u sex-stratified}
+
+num <- length(exposures)*length(mvreg_response_labels)
+
+f.final <- list(list(),list(),list())
+m.final <- list(list(),list(),list())
+
+f.pc.final <- list(list(),list(),list())
+m.pc.final <- list(list(),list(),list())
+
+for (i in 1:length(exposures)) {
+  f.final[[i]][[1]] <- return.fm(f.adj3[[i]][[1]], f.adj2[[i]][[1]])
+  m.final[[i]][[1]] <- return.fm(m.adj3[[i]][[1]], m.adj2[[i]][[1]])
+}
+
+```
+
+### Table 2 (Unstandardised betas, unstratified models) {.tabset .tabset-fade .tabset-pills}
+
+#### BMI non-PC
+
+```{r Table 2u BMI unstandardised non-PC, eval=TRUE,include=TRUE}
+
+# BMI, non-pc
+make_table2(
+  model_list = list(all.unadj.i[[1]], all.adj3[[1]], all.final[[1]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas,
+  kable = FALSE
+  ) %>% 
+  my_kable(my_header = "Non-PC Clocks | BMI",
+           col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+
+```
+
+#### BMI PC
+
+```{r Table 2u BMI standardised PC, eval=TRUE,include=TRUE}
+# BMI, pc
+make_table2(
+  model_list = list(all.pc.unadj.i[[1]], all.pc.adj3[[1]], all.pc.final[[1]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas, 
+  kable = FALSE
+  ) %>% my_kable(my_header = "PC Clocks | BMI",
+                 col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+
+```
+
+#### Waist Circumference non-PC
+
+```{r Table 2u WC non-PC, eval=TRUE,include=TRUE}
+
+# WC, non-pc
+make_table2(
+  model_list = list(all.unadj.i[[2]], all.adj3[[2]], all.final[[2]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas, 
+  kable = FALSE
+  ) %>% my_kable(my_header = "Non-PC Clocks | Waist Circumference",
+                 col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+
+```
+
+#### Waist Circumference PC
+
+```{r Table 2u WC PC, eval=TRUE,include=TRUE}
+# Waist Circumference, pc
+make_table2(
+  model_list = list(all.pc.unadj.i[[2]], all.pc.adj3[[2]], all.pc.final[[2]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas, 
+  kable = FALSE
+  ) %>% my_kable(my_header = "PC Clocks | Waist Circumference",
+                 col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+
+```
+
+#### Waist-to-Height Ratio non-PC
+
+```{r Table 2u WHtR non-PC, eval=TRUE,include=TRUE}
+
+# WHtR, non-pc
+make_table2(
+  model_list = list(all.unadj.i[[3]], all.adj3[[3]], all.final[[3]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas, 
+  kable = FALSE
+  ) %>% my_kable(my_header = "Non-PC Clocks | Waist-to-Height Ratio",
+                 col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+```
+
+#### Waist-to-Height Ratio PC
+
+```{r Table 2u WHtR PC, eval=TRUE,include=TRUE}
+# Waist-to-Height Ratio, pc
+make_table2(
+  model_list = list(all.pc.unadj.i[[3]], all.pc.adj3[[3]], all.pc.final[[3]]),
+  model_names = mvreg_response_labels,
+  keep_betas = my_betas, 
+  kable = FALSE
+  ) %>% my_kable(my_header = "PC Clocks | Waist-to-Height Ratio",
+                 col.names = c("Clock", "Term", "Model 1", "Model 2", "Final"))
+```
+
+### Table 2 (Unstandardised betas, for publication) {.tabset .tabset-fade .tabset-pills}
+
+#### Individual Clocks
+
+##### non-PC
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = all.final,
+    model_names = mvreg_response_nonpc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 2, stop = 7
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", mvreg_response_labels[2:7]
+        ),
+    caption = "Unstandardised Betas"
+)
+
+full_join(
+  adj_benj_hoch(
+    do.call(rbind, lapply(c(1:length(exposures_pub)), function(x) extract_coef_pval(
+      f.final[[x]][[1]],
+      model_name = exposures_pub[x],
+      to_return = c("BMI", "WC", "WHtR", "BMI*uw", "WC*uw", "WHtR*uw")
+    ))), which.group2 = c("BMI", "WC", "WHtR")
+  ),
+  adj_benj_hoch(
+    do.call(rbind, lapply(c(1:length(exposures_pub)), function(x) extract_coef_pval(
+      m.final[[x]][[1]],
+      model_name = exposures_pub[x],
+      to_return = c("BMI", "WC", "WHtR", "BMI*uw", "WC*uw", "WHtR*uw")
+    ))), which.group2 = c("BMI", "WC", "WHtR")
+  ), by = c("Clock", "term")
+) %>% mutate(across(everything(), ~ifelse(is.na(.), "", .))) %>% kable(col.names = c("Measure", "Coeff", "Female", "Male"), format='html', escape=FALSE) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  column_spec(column = 1, bold = TRUE) %>%
+  column_spec(column = 3:4, width = "16em") %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  add_header_above(header = c(
+    setNames(object = 2, nm = " "),
+    setNames(object = 2, nm = mvreg_response_labels[7])
+    ))
+
+```
+
+##### PC
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = all.pc.final,
+    model_names = mvreg_response_pc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 2, stop = 7
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", mvreg_response_labels_pub[2:7]
+        ),
+    caption = "Unstandardised Betas"
+)
+
+```
+
+#### Combination Clocks
+
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = list(list(all.final[[1]][[1]], all.pc.final[[1]][[1]]), list(all.final[[2]][[1]], all.pc.final[[2]][[1]]), list(all.final[[3]][[1]], all.pc.final[[3]][[1]])),
+    model_names = mvreg_response_pc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 1, stop = 2,
+    which.group2 = "none"
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", c(mvreg_response_labels[1], mvreg_response_labels_pub[1])
+        ),
+    caption = "Unstandardised Betas"
+)
+
+```
+
+### Making models with standardised betas {.tabset .tabset-fade .tabset-pills}
+
+```{r making models 1s, include = FALSE, eval = TRUE}
+
+# create empty lists
+# non-PC clocks
+all.unadj.i <- list() # unadjusted, except for sex, interacted with exposure
+all.adj2 <- list() # fully-adjusted
+all.adj3 <- list() # fully-adjusted, with underweight interacted
+all.adj4 <- list() # fully-adjusted, without uw interactions, not sex-stratified
+all.adj5 <- list() # fully-adjusted, without interactions
+
+# PC clocks
+all.pc.unadj.i <- list() # unadjusted, except for sex, interacted with exposure
+all.pc.adj2 <- list() # fully-adjusted
+all.pc.adj3 <- list() # fully-adjusted, with underweight interacted
+all.pc.adj4 <- list() # fully-adjusted, without uw interactions, not sex-stratified
+all.pc.adj5 <- list() # fully-adjusted, without interactions
+
+for (j in 1:length(exposures.std)) {
+  all.unadj.i[[j]] <- table.mvreg(mvreg_response_nonpc, exposures.std[j], c(paste0(exposures.std[j], "*sex")), epi4, to_return = "model")
+  all.adj2[[j]] <- table.mvreg(mvreg_response_nonpc, exposures.std[j], c(paste0(exposures.std[j], "*sex"), cell.props, covars.fem), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+  all.adj3[[j]] <- table.mvreg(mvreg_response_nonpc, exposures.std[j], c(cell.props, covars.fem, paste0(exposures.std[j], "*sex"), paste0(exposures.std[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+  all.adj4[[j]] <- table.mvreg(mvreg_response_nonpc, exposures.std[j], c(cell.props, covars.fem, "sex", paste0(exposures.std[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+  all.adj5[[j]] <- table.mvreg(mvreg_response_nonpc, exposures.std[j], c(cell.props, covars.fem, "sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+}
+
+# adding height to the waist circumference plots.
+all.adj2[[2]] <- table.mvreg(mvreg_response_nonpc, exposures.std[2], c(paste0(exposures.std[2], "*sex"), cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+all.adj3[[2]] <- table.mvreg(mvreg_response_nonpc, exposures.std[2], c(cell.props, covars.fem, paste0(exposures.std[2], "*sex"), paste0(exposures.std[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+all.adj4[[2]] <- table.mvreg(mvreg_response_nonpc, exposures.std[2], c(cell.props, covars.fem, paste0(exposures.std[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+all.adj5[[2]] <- table.mvreg(mvreg_response_nonpc, exposures.std[2], c(cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+
+for (j in 1:length(exposures.std)) {
+  all.pc.unadj.i[[j]] <- table.mvreg(mvreg_response_pc, exposures.std[j], c("sex", paste0(exposures.std[j], "*sex")), epi4, to_return = "model")
+  all.pc.adj2[[j]] <- table.mvreg(mvreg_response_pc, exposures.std[j], c(paste0(exposures.std[j], "*sex"), cell.props, covars.fem), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+  all.pc.adj3[[j]] <- table.mvreg(mvreg_response_pc, exposures.std[j], c(paste0(exposures.std[j], "*sex"), cell.props, covars.fem, paste0(exposures.std[j], "*sex"), paste0(exposures.std[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+  all.pc.adj4[[j]] <- table.mvreg(mvreg_response_pc, exposures.std[j], c(cell.props, covars.fem, "sex", paste0(exposures.std[j], "*uw")), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+  all.pc.adj5[[j]] <- table.mvreg(mvreg_response_pc, exposures.std[j], c(cell.props, covars.fem, "sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+}
+
+# adding height to the waist circumference plots.
+all.pc.adj2[[2]] <- table.mvreg(mvreg_response_pc, exposures.std[2], c(paste0(exposures.std[2], "*sex"), cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, not uw-stratified
+all.pc.adj3[[2]] <- table.mvreg(mvreg_response_pc, exposures.std[2], c(cell.props, covars.fem, paste0(exposures.std[2], "*sex"), paste0(exposures.std[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, with sex and uw interactions, not sex-stratified
+all.pc.adj4[[2]] <- table.mvreg(mvreg_response_pc, exposures.std[2], c(cell.props, covars.fem, paste0(exposures.std[2], "*uw"), "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without sex interactions, with uw interaction
+all.pc.adj5[[2]] <- table.mvreg(mvreg_response_pc, exposures.std[2], c(cell.props, covars.fem, "height*sex"), epi4 %>% mutate(across(c(num.preg.comp, totmonthsbf), function (x) ifelse(is.na(x), 0, x))), to_return = "model") # fully-adjusted, without interactions
+
+```
+
+```{r which model 5s}
+
+num <- length(exposures.std)*length(mvreg_response_labels)
+
+all.final <- list(list(),list(),list(),list())
+
+all.pc.final <- list(list(),list(),list(),list())
+
+for (i in 1:length(exposures.std)) {
+  for (j in 1:length(mvreg_response_labels)) {
+    all.final[[i]][[j]] <- return.fm(return.fm(all.adj3[[i]][[j]], all.adj2[[i]][[j]], all.adj5[[i]][[j]]), return.fm(all.adj3[[i]][[j]], all.adj4[[i]][[j]], all.adj5[[i]][[j]]))
+  
+    all.pc.final[[i]][[j]] <- return.fm(return.fm(all.pc.adj3[[i]][[j]], all.pc.adj2[[i]][[j]], all.pc.adj5[[i]][[j]]), return.fm(all.pc.adj3[[i]][[j]], all.pc.adj4[[i]][[j]], all.pc.adj5[[i]][[j]]))
+  }
+}
+
+```
+
+```{r making s sex-stratified models for DunedinPACE, include = FALSE, eval = TRUE}
+
+# create empty lists
+# males
+m.adj2 <- list() # fully-adjusted
+m.adj3 <- list() # fully-adjusted, with underweight interacted
+
+# females
+f.adj2 <- list() # fully-adjusted
+f.adj3 <- list() # fully-adjusted, with underweight interacted
+
+# Male only
+for (j in 1:length(exposures.std)) {
+  m.adj2[[j]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[j], c(cell.props, covars.all), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, not underweight-interacted
+  m.adj3[[j]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[j], c(cell.props, covars.all, paste0(exposures.std[j], "*uw")), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, underweight interacted
+}
+
+# adding height to waist circumference
+m.adj2[[2]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[2], c(cell.props, covars.all, "height"), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, not underweight-interacted
+m.adj3[[2]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[2], c(cell.props, covars.all, paste0(exposures.std[2], "*uw"), "height"), epi4[epi4$sex == 1,], to_return = "model") # fully-adjusted, underweight interacted
+
+# Female only
+for (j in 1:length(exposures.std)) {
+  f.adj2[[j]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[j], c(cell.props, covars.fem), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, not sex-stratified
+  f.adj3[[j]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[j], c(cell.props, covars.fem, paste0(exposures.std[j], "*uw")), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, underweight interacted
+}
+
+# adding height to waist circumference
+f.adj2[[2]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[2], c(cell.props, covars.fem, "height"), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, not underweight-interacted
+f.adj3[[2]] <- table.mvreg(mvreg_response_nonpc[7], exposures.std[2], c(cell.props, covars.fem, paste0(exposures.std[2], "*uw"), "height"), epi4[epi4$sex == 0,], to_return = "model") # fully-adjusted, underweight interacted
+
+```
+
+```{r which model 5 s sex-stratified}
+
+num <- length(exposures.std)*length(mvreg_response_labels)
+
+f.final <- list(list(),list(),list())
+m.final <- list(list(),list(),list())
+
+f.pc.final <- list(list(),list(),list())
+m.pc.final <- list(list(),list(),list())
+
+for (i in 1:length(exposures.std)) {
+  f.final[[i]][[1]] <- return.fm(f.adj3[[i]][[1]], f.adj2[[i]][[1]])
+  m.final[[i]][[1]] <- return.fm(m.adj3[[i]][[1]], m.adj2[[i]][[1]])
+}
+
+```
+
+### Table 2 (Standardised betas, for publication) {.tabset .tabset-fade .tabset-pills}
+
+#### Individual Clocks
+
+##### non-PC
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = all.final,
+    model_names = mvreg_response_nonpc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 2, stop = 7
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", mvreg_response_labels[2:7]
+        ),
+    caption = "Unstandardised Betas"
+)
+
+full_join(
+  adj_benj_hoch(
+    do.call(rbind, lapply(c(1:length(exposures_pub)), function(x) extract_coef_pval(
+      f.final[[x]][[1]],
+      model_name = exposures_pub[x],
+      to_return = c("BMI", "WC", "WHtR", "BMI*uw", "WC*uw", "WHtR*uw")
+    ))), which.group2 = c("BMI", "WC", "WHtR")
+  ),
+  adj_benj_hoch(
+    do.call(rbind, lapply(c(1:length(exposures_pub)), function(x) extract_coef_pval(
+      m.final[[x]][[1]],
+      model_name = exposures_pub[x],
+      to_return = c("BMI", "WC", "WHtR", "BMI*uw", "WC*uw", "WHtR*uw")
+    ))), which.group2 = c("BMI", "WC", "WHtR")
+  ), by = c("Clock", "term")
+) %>% mutate(across(everything(), ~ifelse(is.na(.), "", .))) %>% kable(col.names = c("Measure", "Coeff", "Female", "Male"), format='html', escape=FALSE) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  column_spec(column = 1, bold = TRUE) %>%
+  column_spec(column = 3:4, width = "16em") %>%
+  collapse_rows(columns = 1, valign = "top") %>%
+  add_header_above(header = c(
+    setNames(object = 2, nm = " "),
+    setNames(object = 2, nm = mvreg_response_labels[7])
+    ))
+
+```
+
+##### PC
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = all.pc.final,
+    model_names = mvreg_response_pc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 2, stop = 7
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", mvreg_response_labels_pub[2:7]
+        ),
+    caption = "Unstandardised Betas"
+)
+
+```
+
+#### Combination Clocks
+
+```{r, include = TRUE}
+
+make_table2_pub(
+    model_list = list(list(all.final[[1]][[1]], all.pc.final[[1]][[1]]), list(all.final[[2]][[1]], all.pc.final[[2]][[1]]), list(all.final[[3]][[1]], all.pc.final[[3]][[1]])),
+    model_names = mvreg_response_pc,
+    keep_betas = c("BMI", "WC", "WHtR"),
+    start = 1, stop = 2,
+    which.group2 = "none"
+) %>% my_kable(
+    col.names = c(
+        "Measure", "Coeff", c(mvreg_response_labels[1], mvreg_response_labels_pub[1])
+        ),
+    caption = "Unstandardised Betas"
+)
+
+```
+
+
+### Compare betas by adiposity measure {.tabset .tabset-fade .tabset-pills}
+- For predictors that are statistically significant, we empirically compare them.
+
+```{r, include = TRUE}
+# cc = coefficient comparison
+# BMI - all clocks
+cc.BMI <- cbind(
+  rbind(
+    coeff_comp(all.final[[1]][[1]], all.final[[1]][[2]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], all.final[[1]][[3]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], all.final[[1]][[4]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], all.final[[1]][[5]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], all.final[[1]][[6]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], f.final[[1]][[1]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.final[[1]][[1]], m.final[[1]][[1]], predictor = "z.bmi", nested = FALSE)),
+  c("Factor & Horvath", "Factor & Hannum", "Factor & PhenoAge", "Factor & GrimAge", "Factor & DNAmTL", "Factor & DunedinPACE (F, non-uw)", "Factor & DunedinPACE (M, non-uw)"))
+
+# WC all clocks
+cc.WC <- cbind(
+  rbind(
+    coeff_comp(all.final[[2]][[1]], all.final[[2]][[2]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], all.final[[2]][[3]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], all.final[[2]][[4]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], all.final[[2]][[5]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], all.final[[2]][[6]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], f.final[[2]][[1]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.final[[2]][[1]], m.final[[2]][[1]], predictor = "z.waist", nested = FALSE)),
+  c("Factor & Horvath", "Factor & Hannum", "Factor & PhenoAge", "Factor & GrimAge", "Factor & DNAmTL", "Factor & DunedinPACE (F, non-uw)", "Factor & DunedinPACE (M, non-uw)"))
+
+# WHtR all clocks
+cc.WHtR <- cbind(
+  rbind(
+    coeff_comp(all.final[[3]][[1]], all.final[[3]][[2]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], all.final[[3]][[3]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], all.final[[3]][[4]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], all.final[[3]][[5]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], all.final[[3]][[6]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], f.final[[3]][[1]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.final[[3]][[1]], m.final[[3]][[1]], predictor = "z.whtr", nested = FALSE)),
+  c("Factor & Horvath", "Factor & Hannum", "Factor & PhenoAge", "Factor & GrimAge", "Factor & DNAmTL", "Factor & DunedinPACE (F, non-uw)", "Factor & DunedinPACE (M, non-uw)"))
+
+# Now, the PC clocks
+# BMI - all clocks
+cc.pc.BMI <- cbind(
+  rbind(
+    coeff_comp(all.pc.final[[1]][[1]], all.final[[1]][[1]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[1]][[2]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[1]][[3]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[1]][[4]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[1]][[5]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[1]][[6]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], f.final[[1]][[1]], predictor = "z.bmi", nested = FALSE),
+    coeff_comp(all.pc.final[[1]][[1]], m.final[[1]][[1]], predictor = "z.bmi", nested = FALSE)),
+  c("PCFactor & Factor", "PCFactor & Horvath", "PCFactor & Hannum", "PCFactor & PhenoAge", "PCFactor & GrimAge", "PCFactor & DNAmTL", "PCFactor & DunedinPACE (F, non-uw)", "PCFactor & DunedinPACE (M, non-uw)"))
+
+# WC all clocks
+cc.pc.WC <- cbind(
+  rbind(
+    coeff_comp(all.pc.final[[2]][[1]], all.final[[2]][[1]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[2]][[2]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[2]][[3]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[2]][[4]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[2]][[5]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[2]][[6]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], f.final[[2]][[1]], predictor = "z.waist", nested = FALSE),
+    coeff_comp(all.pc.final[[2]][[1]], m.final[[2]][[1]], predictor = "z.waist", nested = FALSE)),
+  c("PCFactor & Factor", "PCFactor & Horvath", "PCFactor & Hannum", "PCFactor & PhenoAge", "PCFactor & GrimAge", "PCFactor & DNAmTL", "PCFactor & DunedinPACE (F, non-uw)", "PCFactor & DunedinPACE (M, non-uw)"))
+
+# WHtR all clocks
+cc.pc.WHtR <- cbind(
+  rbind(
+    coeff_comp(all.pc.final[[3]][[1]], all.final[[3]][[1]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], all.pc.final[[3]][[2]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], all.pc.final[[3]][[3]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], all.pc.final[[3]][[4]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], all.pc.final[[3]][[5]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], all.pc.final[[3]][[6]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], f.final[[3]][[1]], predictor = "z.whtr", nested = FALSE),
+    coeff_comp(all.pc.final[[3]][[1]], m.final[[3]][[1]], predictor = "z.whtr", nested = FALSE)),
+  c("PCFactor & Factor", "PCFactor & Horvath", "PCFactor & Hannum", "PCFactor & PhenoAge", "PCFactor & GrimAge", "PCFactor & DNAmTL", "PCFactor & DunedinPACE (F, non-uw)", "PCFactor & DunedinPACE (M, non-uw)"))
+
+
+# Factor
+cc.1f <- do.call(
+  rbind,
+  lapply(2:3, function(x) coeff_comp(all.final[[1]][[1]], all.final[[x]][[1]], predictor = "z.bmi", predictor2 = paste0("z.", exposures[x]), nested = FALSE))
+) %>% cbind(c("bmi & wc", "bmi & whtr")) %>% rbind(
+  c(coeff_comp(all.final[[2]][[1]], all.final[[3]][[1]], predictor = "z.waist", predictor2 = paste0("z.", exposures[3]), nested = FALSE), "wc & whtr"))
+
+cc.1f %>% po.kable(caption = "Factor")
+
+# females DunedinPACE
+ws.f <- cbind(
+  "Clock" = mvreg_response_labels[7],
+  "outcome" = mvreg_response_nonpc[7],
+  "Adiposity p-value" = do.call(rbind, lapply(1:3, function(x) f.final[[x]][[1]] %>% broom::tidy() %>% filter(grepl("z.*", term)))) %>% dplyr::select(p.value) %>% min(),
+  "uw-interaction" = gsub(",\\s*$", "", do.call(paste, lapply(1:3, function(x) ifelse(f.final[[x]][[1]] %>% broom::tidy() %>% dplyr::select(term) %>% grepl(":uw*", .), paste0(exposures[x], ", "), ""))))
+) %>% as.data.frame() %>% mutate(across(3, as.numeric)) %>% mutate(
+  comparison = case_when(
+    grepl("[a-z]", `uw-interaction`) ~ "Margins",
+    `Adiposity p-value` < 0.05        ~ "Compare coefficients",
+    TRUE                              ~ ""
+  )
+)
+
+# males DunedinPACE
+ws.m <- cbind(
+  "Clock" = mvreg_response_labels[7],
+  "outcome" = mvreg_response_nonpc[7],
+  "Adiposity p-value" = do.call(rbind, lapply(1:3, function(x) m.final[[x]][[1]] %>% broom::tidy() %>% filter(grepl("z.*", term)))) %>% dplyr::select(p.value) %>% min(),
+  "uw-interaction" = gsub(",\\s*$", "", do.call(paste, lapply(1:3, function(x) ifelse(m.final[[x]][[1]] %>% broom::tidy() %>% dplyr::select(term) %>% grepl(":uw*", .), paste0(exposures[x], ", "), ""))))
+) %>% as.data.frame() %>% mutate(across(3, as.numeric)) %>% mutate(
+  comparison = case_when(
+    grepl("[a-z]", `uw-interaction`) ~ paste0("Margins for ", `uw-interaction`),
+    `Adiposity p-value` < 0.05        ~ "Compare coefficients",
+    TRUE                              ~ ""
+  )
+)
+
+# DunedinPACE - I know BMI shouldn't be there, but this is internal and supplementary
+cc.dun.m <- do.call(
+  rbind,
+  lapply(2:3, function(x) coeff_comp(m.final[[1]][[1]], m.final[[x]][[1]], predictor = "z.bmi", predictor2 = paste0("z.", exposures[x]), nested = FALSE))
+) %>% cbind(c("bmi & wc", "bmi & whtr")) %>% rbind(
+  c(coeff_comp(m.final[[2]][[1]], m.final[[3]][[1]], predictor = "z.waist", predictor2 = paste0("z.", exposures[3]), nested = FALSE), "wc & whtr"))
+
+cc.dun.m %>% po.kable(caption = "DunedinPACE, Males only, BMI later in margins")
+
+# cc = coefficient comparison
+# PC Single factor
+cc.1f.pc <- do.call(
+  rbind,
+  lapply(2:3, function(x) coeff_comp(all.pc.final[[1]][[1]], all.pc.final[[x]][[1]], predictor = "z.bmi", predictor2 = paste0("z.", exposures[x]), nested = FALSE))
+) %>% cbind(c("bmi & wc", "bmi & whtr")) %>% rbind(
+  c(coeff_comp(all.pc.final[[2]][[1]], all.pc.final[[3]][[1]], predictor = "z.waist", predictor2 = paste0("z.", exposures[3]), nested = FALSE), "wc & whtr")
+)
+
+cc.1f.pc %>% po.kable(caption = "PCFactor")
+
+# PC Hannum
+cc.hannum.pc <- do.call(
+  rbind,
+  lapply(2:3, function(x) coeff_comp(all.pc.final[[1]][[3]], all.pc.final[[x]][[3]], predictor = "z.bmi", predictor2 = paste0("z.", exposures[x]), nested = FALSE))
+) %>% cbind(c("bmi & wc", "bmi & whtr")) %>% rbind(
+  c(coeff_comp(all.pc.final[[2]][[3]], all.pc.final[[3]][[3]], predictor = "z.waist", predictor2 = paste0("z.", exposures[3]), nested = FALSE), "wc & whtr"))
+
+cc.hannum.pc %>% po.kable(caption = "Hannum PC")
+
+# PC pheno
+cc.pheno.pc <- do.call(
+  rbind,
+  lapply(c(2,3), function(x) coeff_comp(all.pc.final[[1]][[4]], all.pc.final[[x]][[4]], predictor = "z.bmi", predictor2 = paste0("z.", exposures[x]), nested = FALSE))
+) %>% cbind(c("bmi & wc", "bmi & whtr")) %>% rbind(
+  c(coeff_comp(all.pc.final[[2]][[4]], all.pc.final[[3]][[4]], predictor = "z.waist", predictor2 = "z.whtr", nested = FALSE), "wc & whtr")
+)
+
+cc.pheno.pc %>% po.kable(caption = "PhenoAge PC")
+
+cc.BMI %>% po.kable(caption = "BMI | Factor (non-PC)")
+cc.WC %>% po.kable(caption = "WC | Factor (non-PC)")
+cc.WHtR %>% po.kable(caption = "WHtR | Factor (non-PC)")
+cc.pc.BMI %>% po.kable(caption = "BMI | PCFactor")
+cc.pc.WC %>% po.kable(caption = "WC | PCFactor")
+cc.pc.WHtR %>% po.kable(caption = "WHtR | PCFactor")
+
+```
+
+### Margins for significant interactions {.tabset .tabset-fade .tabset-pills}
+
+PhenoAA and PC PhenoAA are experimental - not due to significant interactions, but to test the effect of controlling for WBC proportions by comparing margins side-by-side.
+
+#### DunedinPACE
+
+```{r margins Dunedin, include = TRUE}
+
+# DunedinPACE BMI
+bmi.dun <- makes3margins(
+  objects = list(all.final[[1]][[7]], f.final[[1]][[1]], m.final[[1]][[1]]),
+  newdata = epi_deid2 %>%
+    dplyr::select(
+      mvreg_response_nonpc[7], dunedin,
+      paste0("z.", exposures[1]), exposures[1],
+      all_of(cell.props), cursmok, hai, num.preg.comp, totmonthsbf, uw, sex
+    ),
+  x_axis = exposures[1], x_range = seq(15.5, 30.5, 2), bandwidth = 1,
+  y_axis = mvreg_response_nonpc[7],
+  title = "DunedinPACE : BMI", x_lab = "BMI (kg/m2)", y_lab = "\u0394 DunedinPACE",
+  translate = "dunedin", sd_ratio = sd(epi_deid2$dunedin)/sd(epi_deid2$rs.dunedin)
+  )
+
+# DunedinPACE WC
+wc.dun <- makes3margins(
+  objects = list(all.final[[2]][[7]], f.final[[2]][[1]], m.final[[2]][[1]]),
+  newdata = epi_deid2 %>%
+    dplyr::select(
+      mvreg_response_nonpc[7], dunedin,
+      paste0("z.", exposures[2]), exposures[2],
+      all_of(cell.props), cursmok, hai, num.preg.comp, totmonthsbf, uw, sex, height
+    ),
+  x_axis = exposures[2], x_range = seq(60, 85, 5), bandwidth = 2.5,
+  y_axis = mvreg_response_nonpc[7],
+  title = "DunedinPACE : WC", x_lab = "WC (cm)", y_lab = "\u0394 DunedinPACE",
+  translate = "dunedin", sd_ratio = sd(epi_deid2$dunedin)/sd(epi_deid2$rs.dunedin)
+  )
+
+# DunedinPACE WHtR
+whtr.dun <- makes3margins(
+  objects = list(all.final[[3]][[7]], f.final[[3]][[1]], m.final[[3]][[1]]),
+  newdata = epi_deid2 %>%
+    dplyr::select(
+      mvreg_response_nonpc[7], dunedin,
+      paste0("z.", exposures[3]), exposures[3],
+      all_of(cell.props), cursmok, hai, num.preg.comp, totmonthsbf, uw, sex
+    ),
+  x_axis = exposures[3], x_range = seq(0.38, 0.53, 0.03), bandwidth = 0.015,
+  y_axis = mvreg_response_nonpc[7],
+  title = "DunedinPACE : WHtR", x_lab = "WHtR", y_lab = "\u0394 DunedinPACE",
+  translate = "dunedin", sd_ratio = sd(epi_deid2$dunedin)/sd(epi_deid2$rs.dunedin)
+  )
+
+# print out main plots
+bmi.dun[[1]] + wc.dun[[1]] + whtr.dun[[1]] + plot_layout(nrow = 2, guides = "collect")
+
+y_range <- lapply(append(bmi.dun, append(wc.dun, whtr.dun)), function(x) layer_scales(x)$y$range$range) %>% unlist() %>% range()
+
+# print out the plots
+collect_plots(lapply(bmi.dun, function(x) x + ylim(y_range)), ylims = FALSE)
+collect_plots(lapply(wc.dun, function(x) x + ylim(y_range)), ylims = FALSE)
+collect_plots(lapply(whtr.dun, function(x) x + ylim(y_range)), ylims = FALSE)
+
+```
+
+### Supplementary Materials {.tabset .tabset-fade .tabset-pills}
+
+#### Supplementary goodness-of-fit tables
+
+Using modelsummary: https://modelsummary.com/man/modelsummary.html
+
+```{r modelsummary supplementary table2, eval = FALSE}
+
+# unadjusted models
+
+# non-pc, no waist circumference
+lapply(c(1,3), function(x) lapply(
+  1:6, function(y) modelsummary(
+    list("Model 1" = all.unadj.i[[x]][[y]], "Model 2" = all.adj3[[x]][[y]], "Final Model" = all.final[[x]][[y]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)",
+    exposures_pub[[x]],
+    "Sex",
+    paste0(exposures_pub[[x]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[x]], " × Underweight")
+    ),
+  title = paste(exposures_pub[x], "|", mvreg_response_labels[y]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[x], "_", mvreg_response_labels[y], ".csv")
+  )
+))
+
+# non-pc, waist circumference
+lapply(
+  1:6, function(y) modelsummary(
+    list("Model 1" = all.unadj.i[[2]][[y]], "Model 2" = all.adj3[[2]][[y]], "Final Model" = all.final[[2]][[y]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)",
+    exposures_pub[[2]],
+    "Sex",
+    paste0(exposures_pub[[2]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Height",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[2]], " × Underweight"),
+    "Height × Sex", "Height × Sex"
+    ),
+  title = paste(exposures_pub[2], "|", mvreg_response_labels[y]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[2], "_", mvreg_response_labels[y], ".csv")
+  )
+)
+
+# DunedinPACE (needed to sex-stratify)
+lapply(c(1,3), function(x) modelsummary(
+    list("Model 1" = all.unadj.i[[x]][[7]], "Model 2" = all.adj3[[x]][[7]], "Final Model" = all.final[[x]][[7]], "Females" = f.final[[x]][[1]], "Males" = m.final[[x]][[1]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)", 
+    exposures_pub[[x]], 
+    "Sex", 
+    paste0(exposures_pub[[x]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[x]], " × Underweight")
+    ),
+  title = paste(exposures_pub[x], "|", mvreg_response_labels[7]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[x], "_", mvreg_response_labels[7], ".csv")
+  )
+)
+
+# DunedinPACE WC
+modelsummary(
+    list("Model 1" = all.unadj.i[[2]][[7]], "Model 2" = all.adj3[[2]][[7]], "Final Model" = all.final[[2]][[7]], "Females" = f.final[[2]][[1]], "Males" = m.final[[2]][[1]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)",
+    exposures_pub[[2]],
+    "Sex",
+    paste0(exposures_pub[[2]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Height",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[2]], " × Underweight"),
+    "Height × Sex"
+    ),
+  title = paste(exposures_pub[2], "|", mvreg_response_labels[7]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[2], "_", mvreg_response_labels[7], ".csv")
+  )
+
+
+# non-pc, no waist circumference
+lapply(c(1,3), function(x) lapply(
+  1:6, function(y) modelsummary(
+    list("Model 1" = all.pc.unadj.i[[x]][[y]], "Model 2" = all.pc.adj3[[x]][[y]], "Final Model" = all.pc.final[[x]][[y]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)",
+    exposures_pub[[x]],
+    "Sex",
+    paste0(exposures_pub[[x]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[x]], " × Underweight")
+    ),
+  title = paste(exposures_pub[x], "|", mvreg_response_labels_pub[y]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[x], "_", mvreg_response_labels_pub[y], ".csv")
+  )
+))
+
+# non-pc, waist circumference
+lapply(
+  1:6, function(y) modelsummary(
+    list("Model 1" = all.pc.unadj.i[[2]][[y]], "Model 2" = all.pc.adj3[[2]][[y]], "Final Model" = all.pc.final[[2]][[y]]),
+  estimate = "{estimate} ({conf.low}, {conf.high})",
+  statistic = c("Std.Error: {std.error}", "p-val: {p.value}"),
+  coef_rename = c(
+    "(Intercept)",
+    exposures_pub[[2]],
+    "Sex",
+    paste0(exposures_pub[[2]], " × Sex"),
+    "CD8T cells",
+    "CD4T cells",
+    "Natural killer cells",
+    "B cells",
+    "Monocytes",
+    "Granulocytes",
+    "Former smoker",
+    "Current smoker",
+    "Wealth index",
+    "Completed Pregs",
+    "Months breastfeeding",
+    "Underweight",
+    "Height",
+    "Completed Pregs × Months breastfeeding",
+    paste0(exposures_pub[[2]], " × Underweight"),
+    "Height × Sex", "Height × Sex"
+    ),
+  title = paste(exposures_pub[2], "|", mvreg_response_labels_pub[y]),
+  output = paste0("tables/supplementary/table1_supp/single_csvs/", exposures_pub[2], "_", mvreg_response_labels_pub[y], ".csv")
+  )
+)
+
+# get files
+# adjusted
+my.files <- list.files('tables/supplementary/table1_supp/single_csvs')
+
+# combine into .xlsx
+tabble(
+  file.list = my.files, 
+  file.path = 'tables/supplementary/table1_supp/single_csvs', 
+  path.to.write.to = 'tables/supplementary/table1_supp/', 
+  file.name = 'tables_w_gof')
+
+```
+
+#### Supplementary confounders
+
+##### Wealth
+
+```{r wealth_adiposity_uw, eval = TRUE, include = TRUE}
+
+# adding and comparing them
+
+# females
+epi_deid2.svy.f <- svydesign(id      = ~new_ids,
+                          data    = epi_deid2[epi_deid2$sex == 0,] %>% mutate(waist = as.numeric(waist)))
+
+tbl_svysummary(data = epi_deid2.svy.f, 
+                 by =  f.uw,
+    # Use include to dplyr::select variables
+    include = c(
+                bmi, waist, whtr, hai, hai
+                ), 
+   label = list(bmi ~ "BMI (kg/m2)",
+                waist ~ "Waist (cm)",
+                whtr ~ "Waist-height ratio",
+                hai ~ "Average Lifetime Household Wealth Index",
+                hai ~ "Concurrent Household Wealth Index"),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})"),
+    digits = list(all_continuous()  ~ c(1, 1),
+                  c(hai, hai, whtr) ~ c(3,3)),
+    type = list(c(bmi, waist, whtr, hai, hai) ~ "continuous"),
+    missing = "no"
+  ) %>%
+  modify_caption("Supplementary descriptive statistics (female)") %>%
+  add_p(test = list(
+      all_continuous() ~ "svy.kruskal.test"
+    )
+  )%>%
+  bold_labels()%>%
+    add_overall()%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
+  as_flex_table()
+
+# males
+epi_deid2.svy.m <- svydesign(id      = ~new_ids,
+                          data    = epi_deid2[epi_deid2$sex == 1,] %>% mutate(waist = as.numeric(waist)))
+
+tbl_svysummary(data = epi_deid2.svy.m, 
+                 by =  f.uw,
+    # Use include to dplyr::select variables
+    include = c(
+                bmi, waist, whtr, hai, hai
+                ), 
+   label = list(bmi ~ "BMI (kg/m2)",
+                waist ~ "Waist (cm)",
+                whtr ~ "Waist-height ratio",
+                hai ~ "Average Lifetime Household Wealth Index",
+                hai ~ "Concurrent Household Wealth Index"),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})"),
+    digits = list(all_continuous()  ~ c(1, 1),
+                  c(hai, hai, whtr) ~ c(3,3)),
+    type = list(c(bmi, waist, whtr, hai, hai) ~ "continuous"),
+    missing = "no"
+  ) %>%
+  modify_caption("Supplementary descriptive statistics (male)") %>%
+  add_p(test = list(
+      all_continuous() ~ "svy.kruskal.test"
+    )
+  )%>%
+  bold_labels()%>%
+    add_overall()%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
+  as_flex_table()
+
+```
+
+##### Smoking
+
+```{r smoking_bioaging, eval = TRUE, include = TRUE}
+
+# adding and comparing them
+
+# females
+epi_deid2.svy <- svydesign(id      = ~new_ids,
+                          data    = epi_deid2[epi_deid2$sex == 1,] %>% filter(!is.na(cursmok)) %>% mutate(
+                            waist = as.numeric(waist),
+                      cursmok = case_when(
+                        cursmok == 2 ~ "Current",
+                        cursmok == 1 ~ "Former", TRUE ~ "Never"
+                      ))
+                      )
+
+tbl_svysummary(data = epi_deid2.svy, 
+                 by =  cursmok,
+    # Use include to dplyr::select variables
+    include = c(
+                bmi, waist, whtr,
+                r.dnamage,
+                r.dnamagehannum,
+                r.dnamphenoage,
+                r.dnamgrimage,
+                r.dnamtl,
+                dunedin,
+                r.pchorvath2, 
+                r.pchannum, 
+                r.pcphenoage, 
+                r.pcgrimage, 
+                r.pcdnamtl,
+                factor.age, 
+                pcfactor.age
+                ), 
+   label = list(bmi ~ "BMI (kg/m2)",
+                waist ~ "Waist (cm)",
+                whtr ~ "Waist-height ratio",
+                                # clocks
+                r.dnamage ~ "Horvath", 
+                r.dnamagehannum ~ "Hannum", 
+                r.dnamphenoage ~ "PhenoAge", 
+                r.dnamgrimage ~ "GrimAge", 
+                r.dnamtl ~ "DNAmTL", 
+                dunedin ~ "DunedinPACE",
+                r.pchorvath2 ~ "PCHorvath", 
+                r.pchannum ~ "PCHannum", 
+                r.pcphenoage ~ "PCPhenoAge", 
+                r.pcgrimage ~ "PCGrimAge", 
+                r.pcdnamtl ~ "PCDNAmTL",
+                factor.age ~ "Factor", 
+                pcfactor.age ~ "PCFactor"),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})"),
+    digits = list(all_continuous()  ~ c(3, 3),
+                  c(bmi, waist) ~ c(1,1)),
+    type = list(c(bmi, waist, whtr,
+                r.dnamage,
+                r.dnamagehannum,
+                r.dnamphenoage,
+                r.dnamgrimage,
+                r.dnamtl,
+                dunedin,
+                r.pchorvath2, 
+                r.pchannum, 
+                r.pcphenoage, 
+                r.pcgrimage, 
+                r.pcdnamtl,
+                factor.age, 
+                pcfactor.age) ~ "continuous"),
+    missing = "no"
+  ) %>%
+  modify_caption("Adiposity and ageing by smoking satus (males)") %>%
+  add_p(test = list(
+      all_continuous() ~ "svy.kruskal.test"
+    )
+  )%>%
+  bold_labels()%>%
+    add_overall()%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
+  as_flex_table()
+
+```
+
+#### Supplementary WC and parity
+
+```{r, include = TRUE}
+
+# adding and comparing them
+epi_deid2.t1 <- epi_deid2 %>% filter(sex == 0) # getting rid of labels
+
+epi_deid2.t1_svy <- svydesign(id = ~new_ids, data = epi_deid2.t1 %>% mutate(
+  everbirth = case_when(everbirth == 0 ~ "Nulliparous", TRUE ~ "Parous")))
+#####
+sum.table.f <- tbl_svysummary(data = epi_deid2.t1_svy, by = everbirth,
+    # Use include to dplyr::select variables
+    include = c(bmi, f.bmi4cat, waist, f.waist.high, whtr, f.whtr.high, 
+                dunedin, rs.dnamphenoage, rs.pcphenoage
+                ), 
+   label = list(bmi ~ "BMI (kg/m2)",
+                f.bmi4cat ~ 'BMI Category',
+                waist ~ "Waist circumference (cm)",
+                f.waist.high ~ "High Waist Circumference",
+                whtr ~ "Waist-height ratio",
+                f.whtr.high ~ "High Waist-to-Height Ratio",
+                dunedin ~ "DunedinPACE",
+                rs.dnamphenoage ~ "PhenoAge",
+                rs.pcphenoage ~ "PC PhenoAge"
+   ),
+    statistic = list(all_continuous()  ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n}  ({p}%)"),
+    digits = list(
+                  all_continuous()  ~ c(1, 1),
+                  c(whtr, dunedin, rs.dnamphenoage, rs.pcphenoage) ~ c(3,3),
+                  all_categorical() ~ c(0, 1)),
+    type = list(c(bmi, waist, whtr) ~ "continuous"),
+   # sort = list(c(colnames(epi_deid2.t1_svy)[grepl(".high", epi_deid2.t1_svy %>% colnames)], cursmok) ~ "frequency"),
+    missing = "no"
+  ) %>%
+  modify_caption("Descriptive statistics") %>%
+  add_p(test = list(
+      all_continuous() ~ "svy.kruskal.test",
+      all_categorical() ~ "svy.chisq.test"
+    )
+  ) %>%
+  bold_labels()%>%
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
+
+# write.csv2(sum.table.f %>% as.data.frame(), "tables/table_WC_supp_parous_f.csv")
+sum.table.f %>% as_flex_table()
+
+
+```
+
+#### Random calcs
+
+```{r, include = FALSE}
+
+coeff_comp(model1 = all.pc.final[[3]][[1]], model2 = all.pc.final[[3]][[2]],
+           predictor = "whtr", nested = FALSE)
+
+```
+## {-}

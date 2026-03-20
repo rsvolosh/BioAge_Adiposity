@@ -1,0 +1,28 @@
+Package: BAA
+Type: Package
+Title: Contains functions and data for analysis, tables, and figures
+Version: 0.1.1
+Author: R.S. Voloshchuk
+Maintainer: R.S.Voloshchuk <rvolosh@unc.edu>
+Description: The functions in this package can be used to create the necessary variables, multivariate linear models, margins plots, and all tables and figures used in the paper. They can also be easily modified to suit a variety of different datasets. The analysis file contains the code for the creation of all tables and figures in the paper. Some "write" functions are commented out. The files in the imputation folder show the procedures used to impute missing data.
+License: GNU GPL v3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
+Imports: 
+    broom,
+    cowplot,
+    dplyr,
+    gtsummary,
+    haven,
+    kableExtra,
+    magrittr,
+    mice,
+    psych,
+    purrr,
+    rlang,
+    stargazer,
+    stats,
+    survey,
+    tidyr,
+    tidyverse
