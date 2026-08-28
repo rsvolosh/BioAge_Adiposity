@@ -25,7 +25,7 @@ library(gtsummary)
 
 ```{r load data, eval=TRUE, include=FALSE}
 
-load('data.RData')
+load('../data.RData')
 
 # scaling WC, WHtR, and DunedinPACE, DNAmTL residual by 10
 epi4 <- epi_deid2 %>% mutate_at(vars(c(whtr, r.dnamtl)), ~ 10*.) %>% mutate(waist = waist/10) %>% mutate(bmi = bmi/5) %>%
@@ -156,7 +156,7 @@ sum.table <- tbl_svysummary(data = epi_deid2.t1_svy,
 
 # write.csv2(sum.table %>% as.data.frame(), "tables/table1.csv")
 
-sum.table %>% as_flex_table()
+sum.table
 ```
 
 #### Table 1 (pregnancy + breastfeeding variables)
@@ -215,7 +215,7 @@ sum.table.f <- tbl_svysummary(data = epi_deid2.t1_svyf,
       modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
 
 # write.csv2(sum.table.f %>% as.data.frame(), "tables/table1_f.csv")
-sum.table.f %>% as_flex_table()
+sum.table.f
 
 ```
 
@@ -927,7 +927,7 @@ whtr.dun <- makes3margins(
   )
 
 # print out main plots
-bmi.dun[[1]] + wc.dun[[1]] + whtr.dun[[1]] + plot_layout(nrow = 2, guides = "collect")
+bmi.dun[[1]] + wc.dun[[1]] + whtr.dun[[1]] + patchwork::plot_layout(nrow = 2, guides = "collect")
 
 y_range <- lapply(append(bmi.dun, append(wc.dun, whtr.dun)), function(x) layer_scales(x)$y$range$range) %>% unlist() %>% range()
 
@@ -1187,8 +1187,7 @@ tbl_svysummary(data = epi_deid2.svy.f,
   )%>%
   bold_labels()%>%
     add_overall()%>%
-      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
-  as_flex_table()
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
 
 # males
 epi_deid2.svy.m <- svydesign(id      = ~new_ids,
@@ -1218,8 +1217,7 @@ tbl_svysummary(data = epi_deid2.svy.m,
   )%>%
   bold_labels()%>%
     add_overall()%>%
-      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
-  as_flex_table()
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
 
 ```
 
@@ -1301,8 +1299,7 @@ tbl_svysummary(data = epi_deid2.svy,
   )%>%
   bold_labels()%>%
     add_overall()%>%
-      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)") %>%
-  as_flex_table()
+      modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
 
 ```
 
@@ -1351,8 +1348,26 @@ sum.table.f <- tbl_svysummary(data = epi_deid2.t1_svy, by = everbirth,
       modify_header(label = "**Variable**", all_stat_cols() ~ "**{level}**, n = {n} ({style_percent(p)}%)")
 
 # write.csv2(sum.table.f %>% as.data.frame(), "tables/table_WC_supp_parous_f.csv")
-sum.table.f %>% as_flex_table()
+sum.table.f
 
+
+```
+
+#### Sensitivity Analysis
+
+```{r sensitivity calcs, include = FALSE}
+source("sensitivity_analysis.R")
+```
+
+```{r print sensitivity tables, include = TRUE}
+
+# correlations
+cor.table.ic
+cor.table.fac
+
+# beta comparisons
+coeff_diffs_facs
+coeff_diffs_ics
 
 ```
 
