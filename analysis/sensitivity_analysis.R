@@ -193,24 +193,6 @@ epi_new3[["factor_f_pc"]] <- factor.scores(
 
 # correlations among latent variables ---------------
 
-## non-PC ----------------
-
-cor(
-  epi_new3 %>% dplyr::select(
-    factor_nf,
-    factor_f
-  )
-)
-
-## PC ----------------
-
-cor(
-  epi_new3 %>% dplyr::select(
-    factor_nf_pc,
-    factor_f_pc
-  )
-)
-
 cor.table.fac <- cbind(
   "Factor" = c(
     "FactorAge",
@@ -218,18 +200,8 @@ cor.table.fac <- cbind(
   ),
   "Correlation" = c(
     # non-PC
-    sprintf("%.4f", cor(
-      epi_new3 %>% dplyr::select(
-        factor_nf,
-        factor_f
-      )
-    )),
-    sprintf("%.4f", cor(
-      epi_new3 %>% dplyr::select(
-        factor_nf_pc,
-        factor_f_pc
-      )
-    ))
+    sprintf("%.4f", cor(epi_new3$factor_nf, epi_new3$factor_f)),
+    sprintf("%.4f", cor(epi_new3$factor_nf_pc, epi_new3$factor_f_pc))
   )
 ) %>%
   # publication-ready table
@@ -660,7 +632,7 @@ coeff_diffs_ics <- cbind(
     "PCGrimAge",
     "PCDNAmTL"
   ),
-  "BMI - Diff (95% CI)" = c(
+  "BMI - Difference (95% CI)" = c(
     table_coeff_comp(coeff_comp(m.bmi.horvath[[1]], m.bmi.horvath[[2]], "z.bmi", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.bmi.hannum[[1]], m.bmi.hannum[[2]], "z.bmi", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.bmi.phenoage[[1]], m.bmi.phenoage[[2]], "z.bmi", nested = FALSE)),
@@ -674,7 +646,7 @@ coeff_diffs_ics <- cbind(
     table_coeff_comp(coeff_comp(m.bmi.grimage_pc[[1]], m.bmi.grimage_pc[[2]], "z.bmi", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.bmi.dnamtl_pc[[1]], m.bmi.dnamtl_pc[[2]], "z.bmi", nested = FALSE))
   ),
-  "WC - Diff (95% CI)" = c(
+  "WC - Difference (95% CI)" = c(
     table_coeff_comp(coeff_comp(m.waist.horvath[[1]], m.waist.horvath[[2]], "z.waist", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.waist.hannum[[1]], m.waist.hannum[[2]], "z.waist", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.waist.phenoage[[1]], m.waist.phenoage[[2]], "z.waist", nested = FALSE)),
@@ -688,7 +660,7 @@ coeff_diffs_ics <- cbind(
     table_coeff_comp(coeff_comp(m.waist.grimage_pc[[1]], m.waist.grimage_pc[[2]], "z.waist", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.waist.dnamtl_pc[[1]], m.waist.dnamtl_pc[[2]], "z.waist", nested = FALSE))
   ),
-  "WHtR - Diff (95% CI)" = c(
+  "WHtR - Difference (95% CI)" = c(
     table_coeff_comp(coeff_comp(m.whtr.horvath[[1]], m.whtr.horvath[[2]], "z.whtr", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.whtr.hannum[[1]], m.whtr.hannum[[2]], "z.whtr", nested = FALSE)),
     table_coeff_comp(coeff_comp(m.whtr.phenoage[[1]], m.whtr.phenoage[[2]], "z.whtr", nested = FALSE)),
