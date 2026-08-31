@@ -1366,8 +1366,7 @@ cor.table.ic
 cor.table.fac
 
 # beta comparisons
-coeff_diffs_facs
-coeff_diffs_ics
+all_sensitivity_plot
 
 ```
 

@@ -1,4 +1,4 @@
-
+setwd("/Users/rvolosh/Documents/Papers/Cebu Epigenetics/BioAge_Adiposity/analysis")
 # import data ---------------
 
 load("../data.RData")
@@ -686,3 +686,231 @@ coeff_diffs_ics <- cbind(
   collapse_rows(columns = 1, valign = "top") %>%
   add_header_above(header = c(setNames(object = 4, nm = "Coefficient Differences for Individual Clocks")))
 
+# plotting coefficients ------------------------
+
+## factor scores ------------------------
+
+
+factor_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi_nf, m.bmi_f),
+    list(m.waist_nf, m.waist_f),
+    list(m.whtr_nf, m.whtr_f)
+  ),
+  model_names = c("Unfiltered", "Filtered"),
+  myfontsize = 2,
+  my.title = "FactorAge",
+  legend_position = "left"
+)
+
+factor_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi_nf_pc, m.bmi_f_pc),
+    list(m.waist_nf_pc, m.waist_f_pc),
+    list(m.whtr_nf_pc, m.whtr_f_pc)
+  ),
+  model_names = c("Unfiltered", "Filtered"),
+  myfontsize = 2,
+  my.title = "PCFactorAge"
+)
+
+## non-PC clocks ------------------------
+
+horvath_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.horvath[[1]], m.bmi.horvath[[2]]),
+    list(m.waist.horvath[[1]], m.waist.horvath[[2]]),
+    list(m.whtr.horvath[[1]], m.whtr.horvath[[2]])
+  ),
+  model_names = c("Horvath Old", "Horvath New"),
+  myfontsize = 2,
+  my.title = "Horvath",
+  legend_position = "left"
+)
+
+hannum_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.hannum[[1]], m.bmi.hannum[[2]]),
+    list(m.waist.hannum[[1]], m.waist.hannum[[2]]),
+    list(m.whtr.hannum[[1]], m.whtr.hannum[[2]])
+  ),
+  model_names = c("hannum Old", "hannum New"),
+  myfontsize = 2,
+  my.title = "hannum"
+)
+
+phenoage_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.phenoage[[1]], m.bmi.phenoage[[2]]),
+    list(m.waist.phenoage[[1]], m.waist.phenoage[[2]]),
+    list(m.whtr.phenoage[[1]], m.whtr.phenoage[[2]])
+  ),
+  model_names = c("phenoage Old", "phenoage New"),
+  myfontsize = 2,
+  my.title = "grimage"
+)
+
+grimage_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.grimage[[1]], m.bmi.grimage[[2]]),
+    list(m.waist.grimage[[1]], m.waist.grimage[[2]]),
+    list(m.whtr.grimage[[1]], m.whtr.grimage[[2]])
+  ),
+  model_names = c("grimage Old", "grimage New"),
+  myfontsize = 2,
+  my.title = "grimage"
+)
+
+dnamtl_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.dnamtl[[1]], m.bmi.dnamtl[[2]]),
+    list(m.waist.dnamtl[[1]], m.waist.dnamtl[[2]]),
+    list(m.whtr.dnamtl[[1]], m.whtr.dnamtl[[2]])
+  ),
+  model_names = c("dnamtl Old", "dnamtl New"),
+  myfontsize = 2,
+  my.title = "dnamtl"
+)
+
+dpace.f_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.dpace.f[[1]], m.bmi.dpace.f[[2]]),
+    list(m.waist.dpace.f[[1]], m.waist.dpace.f[[2]]),
+    list(m.whtr.dpace.f[[1]], m.whtr.dpace.f[[2]])
+  ),
+  model_names = c("dpace.f Old", "dpace.f New"),
+  myfontsize = 2,
+  my.title = "dpace.f"
+)
+
+dpace.m_coeffs <- plot.coeffs(
+  models = list(
+    list(m.bmi.dpace.m[[1]], m.bmi.dpace.m[[2]]),
+    list(m.waist.dpace.m[[1]], m.waist.dpace.m[[2]]),
+    list(m.whtr.dpace.m[[1]], m.whtr.dpace.m[[2]])
+  ),
+  model_names = c("dpace.m Old", "dpace.m New"),
+  myfontsize = 2,
+  my.title = "dpace.m"
+)
+
+
+## PC clocks ------------------------
+
+horvath_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi.horvath_pc[[1]], m.bmi.horvath_pc[[2]]),
+    list(m.waist.horvath_pc[[1]], m.waist.horvath_pc[[2]]),
+    list(m.whtr.horvath_pc[[1]], m.whtr.horvath_pc[[2]])
+  ),
+  model_names = c("PCHorvath Old", "PCHorvath New"),
+  myfontsize = 2,
+  my.title = "PCHorvath"
+)
+
+hannum_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi.hannum_pc[[1]], m.bmi.hannum_pc[[2]]),
+    list(m.waist.hannum_pc[[1]], m.waist.hannum_pc[[2]]),
+    list(m.whtr.hannum_pc[[1]], m.whtr.hannum_pc[[2]])
+  ),
+  model_names = c("PChannum Old", "PChannum New"),
+  myfontsize = 2,
+  my.title = "PChannum"
+)
+
+phenoage_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi.phenoage_pc[[1]], m.bmi.phenoage_pc[[2]]),
+    list(m.waist.phenoage_pc[[1]], m.waist.phenoage_pc[[2]]),
+    list(m.whtr.phenoage_pc[[1]], m.whtr.phenoage_pc[[2]])
+  ),
+  model_names = c("PCphenoage Old", "PCphenoage New"),
+  myfontsize = 2,
+  my.title = "PCgrimage"
+)
+
+grimage_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi.grimage_pc[[1]], m.bmi.grimage_pc[[2]]),
+    list(m.waist.grimage_pc[[1]], m.waist.grimage_pc[[2]]),
+    list(m.whtr.grimage_pc[[1]], m.whtr.grimage_pc[[2]])
+  ),
+  model_names = c("PCgrimage Old", "PCgrimage New"),
+  myfontsize = 2,
+  my.title = "PCgrimage"
+)
+
+dnamtl_coeffs_pc <- plot.coeffs(
+  models = list(
+    list(m.bmi.dnamtl_pc[[1]], m.bmi.dnamtl_pc[[2]]),
+    list(m.waist.dnamtl_pc[[1]], m.waist.dnamtl_pc[[2]]),
+    list(m.whtr.dnamtl_pc[[1]], m.whtr.dnamtl_pc[[2]])
+  ),
+  model_names = c("PCdnamtl Old", "PCdnamtl New"),
+  myfontsize = 2,
+  my.title = "PCdnamtl"
+)
+
+## put together
+
+all_sensitivity_plot <- ggpubr::ggarrange(
+  plotlist = list(
+    # top row
+    factor_coeffs[[1]] + ggtitle("FactorAge"),
+    factor_coeffs_pc[[1]] + ggtitle("PCFactorAge"),
+    horvath_coeffs_pc[[1]] + ggtitle("PCHorvath2"),
+    hannum_coeffs_pc[[1]] + ggtitle("PCHannum"),
+    phenoage_coeffs_pc[[1]] + ggtitle("PCPhenoAge"),
+    grimage_coeffs_pc[[1]] + ggtitle("PCGrimAge"),
+    dnamtl_coeffs_pc[[1]] + ggtitle("PCDNAmTL"),
+    # second row
+    factor_coeffs[[2]],
+    factor_coeffs_pc[[2]],
+    horvath_coeffs_pc[[2]],
+    hannum_coeffs_pc[[2]],
+    phenoage_coeffs_pc[[2]],
+    grimage_coeffs_pc[[2]],
+    dnamtl_coeffs_pc[[2]],
+    # third row
+    factor_coeffs[[3]],
+    factor_coeffs_pc[[3]],
+    horvath_coeffs_pc[[2]],
+    hannum_coeffs_pc[[2]],
+    phenoage_coeffs_pc[[2]],
+    grimage_coeffs_pc[[2]],
+    dnamtl_coeffs_pc[[2]],
+    # fourth row
+    horvath_coeffs[[1]] + ggtitle("Horvath"),
+    hannum_coeffs[[1]] + ggtitle("Hannum"),
+    phenoage_coeffs[[1]] + ggtitle("PhenoAge"),
+    grimage_coeffs[[1]] + ggtitle("GrimAge"),
+    dnamtl_coeffs[[1]] + ggtitle("DNAmTL"),
+    dpace.f_coeffs[[1]] + ggtitle("DunedinPACE (F)"),
+    dpace.m_coeffs[[1]] + ggtitle("DunedinPACE (M)"),
+    # fifth row
+    horvath_coeffs[[2]],
+    hannum_coeffs[[2]],
+    phenoage_coeffs[[2]],
+    grimage_coeffs[[2]],
+    dnamtl_coeffs[[2]],
+    dpace.f_coeffs[[2]],
+    dpace.m_coeffs[[2]],
+    # sixth row
+    horvath_coeffs[[3]],
+    hannum_coeffs[[3]],
+    phenoage_coeffs[[3]],
+    grimage_coeffs[[3]],
+    dnamtl_coeffs[[3]],
+    dpace.f_coeffs[[3]],
+    dpace.m_coeffs[[3]]
+  ), nrow = 6, ncol = 7,
+  widths = c(
+    1.75, 1, 1, 1, 1, 1, 1,
+    1.75, 1, 1, 1, 1, 1, 1,
+    1.75, 1, 1, 1, 1, 1, 1,
+    1.75, 1, 1, 1, 1, 1, 1,
+    1.75, 1, 1, 1, 1, 1, 1,
+    1.75, 1, 1, 1, 1, 1, 1
+  )
+)

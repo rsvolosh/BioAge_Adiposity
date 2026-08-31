@@ -226,7 +226,7 @@ table.mvreg = function(output, exposure, covars, dataframe, to_return = "table",
 #' @param ... arguments to be passed on to jtools::plot_summs
 #' @returns If to.return == "plots, returns a regression coefficient plot. It to.return is "x", returns c(xmin, xmax).
 #' @export
-plot.coeffs = function(models, model_names, to_omit = c(), legend_position = "none", xlim = "choose", to.return = "plots", my.title = "choose", x.lab = NULL, ...) {
+plot.coeffs = function(models, model_names, to_omit = c(), legend_position = "none", xlim = "choose", to.return = "plots", my.title = "choose", x.lab = NULL, myfontsize = 5, ...) {
 
   # models = all.unadj
   # model_names = mvreg_response_labels
@@ -274,20 +274,20 @@ plot.coeffs = function(models, model_names, to_omit = c(), legend_position = "no
           y = exposure_labels[i]
         ) +
         ggplot2::theme(
-          legend.text = element_text(size = 16),
-          legend.title = element_text(size = 18),
+          legend.text = element_text(size = myfontsize*16/5),
+          legend.title = element_text(size = myfontsize*18/5),
           legend.position = legend_position
         ) +
         geom_vline(xintercept = 0, color = "red3", linetype = "dashed", size = 0.6) +
         ggplot2::xlim(xmin, xmax) +
-        ggpubr::font("title", size = 20, face = "bold") +
-        ggpubr::font("legend.title", size = 20) +
-        ggpubr::font("legend.text", size = 18) +
-        ggpubr::font("xlab", size = 15) +
-        ggpubr::font("ylab", size = 20, angle = 90,
+        ggpubr::font("title", size = myfontsize*5, face = "bold.italic", color = "blue") +
+        ggpubr::font("legend.title", size = myfontsize*4) +
+        ggpubr::font("legend.text", size = myfontsize*18/5) +
+        ggpubr::font("xlab", size = myfontsize*3) +
+        ggpubr::font("ylab", size = myfontsize*3.5, angle = 90,
 
                      margin = margin(t = 0, r = -3, b = 0, l = 0)) +
-        ggpubr::font("xy.text", size = 20, color = "gray30")
+        ggpubr::font("xy.text", size = myfontsize*4, color = "gray30")
     }
 
     return(plots)
