@@ -722,7 +722,7 @@ horvath_coeffs <- plot.coeffs(
     list(m.waist.horvath[[1]], m.waist.horvath[[2]]),
     list(m.whtr.horvath[[1]], m.whtr.horvath[[2]])
   ),
-  model_names = c("Horvath Old", "Horvath New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "Horvath",
   legend_position = "left"
@@ -734,7 +734,7 @@ hannum_coeffs <- plot.coeffs(
     list(m.waist.hannum[[1]], m.waist.hannum[[2]]),
     list(m.whtr.hannum[[1]], m.whtr.hannum[[2]])
   ),
-  model_names = c("hannum Old", "hannum New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "hannum"
 )
@@ -745,7 +745,7 @@ phenoage_coeffs <- plot.coeffs(
     list(m.waist.phenoage[[1]], m.waist.phenoage[[2]]),
     list(m.whtr.phenoage[[1]], m.whtr.phenoage[[2]])
   ),
-  model_names = c("phenoage Old", "phenoage New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "grimage"
 )
@@ -756,7 +756,7 @@ grimage_coeffs <- plot.coeffs(
     list(m.waist.grimage[[1]], m.waist.grimage[[2]]),
     list(m.whtr.grimage[[1]], m.whtr.grimage[[2]])
   ),
-  model_names = c("grimage Old", "grimage New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "grimage"
 )
@@ -767,7 +767,7 @@ dnamtl_coeffs <- plot.coeffs(
     list(m.waist.dnamtl[[1]], m.waist.dnamtl[[2]]),
     list(m.whtr.dnamtl[[1]], m.whtr.dnamtl[[2]])
   ),
-  model_names = c("dnamtl Old", "dnamtl New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "dnamtl"
 )
@@ -778,7 +778,7 @@ dpace.f_coeffs <- plot.coeffs(
     list(m.waist.dpace.f[[1]], m.waist.dpace.f[[2]]),
     list(m.whtr.dpace.f[[1]], m.whtr.dpace.f[[2]])
   ),
-  model_names = c("dpace.f Old", "dpace.f New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "dpace.f"
 )
@@ -789,7 +789,7 @@ dpace.m_coeffs <- plot.coeffs(
     list(m.waist.dpace.m[[1]], m.waist.dpace.m[[2]]),
     list(m.whtr.dpace.m[[1]], m.whtr.dpace.m[[2]])
   ),
-  model_names = c("dpace.m Old", "dpace.m New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "dpace.m"
 )
@@ -803,7 +803,7 @@ horvath_coeffs_pc <- plot.coeffs(
     list(m.waist.horvath_pc[[1]], m.waist.horvath_pc[[2]]),
     list(m.whtr.horvath_pc[[1]], m.whtr.horvath_pc[[2]])
   ),
-  model_names = c("PCHorvath Old", "PCHorvath New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "PCHorvath"
 )
@@ -814,7 +814,7 @@ hannum_coeffs_pc <- plot.coeffs(
     list(m.waist.hannum_pc[[1]], m.waist.hannum_pc[[2]]),
     list(m.whtr.hannum_pc[[1]], m.whtr.hannum_pc[[2]])
   ),
-  model_names = c("PChannum Old", "PChannum New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "PChannum"
 )
@@ -825,7 +825,7 @@ phenoage_coeffs_pc <- plot.coeffs(
     list(m.waist.phenoage_pc[[1]], m.waist.phenoage_pc[[2]]),
     list(m.whtr.phenoage_pc[[1]], m.whtr.phenoage_pc[[2]])
   ),
-  model_names = c("PCphenoage Old", "PCphenoage New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "PCgrimage"
 )
@@ -836,7 +836,7 @@ grimage_coeffs_pc <- plot.coeffs(
     list(m.waist.grimage_pc[[1]], m.waist.grimage_pc[[2]]),
     list(m.whtr.grimage_pc[[1]], m.whtr.grimage_pc[[2]])
   ),
-  model_names = c("PCgrimage Old", "PCgrimage New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "PCgrimage"
 )
@@ -847,7 +847,7 @@ dnamtl_coeffs_pc <- plot.coeffs(
     list(m.waist.dnamtl_pc[[1]], m.waist.dnamtl_pc[[2]]),
     list(m.whtr.dnamtl_pc[[1]], m.whtr.dnamtl_pc[[2]])
   ),
-  model_names = c("PCdnamtl Old", "PCdnamtl New"),
+  model_names = c("Unfiltered", "Filtered"),
   myfontsize = 2,
   my.title = "PCdnamtl"
 )
